@@ -2042,25 +2042,25 @@ bool LoadBlockIndex(bool fAllowNew)
 		//   vMerkleTree: 3de124b027 
 
         // Genesis block
-        const char* pszTimestamp = "BNP Paribas to pay nearly $9 billion penalty";
+        const char* pszTimestamp = "Traditionally one puts something timely here coinciding with the epoch";
         CTransaction txNew;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
         txNew.vin[0].scriptSig = CScript() << 486604799 << CBigNum(4) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
-        txNew.vout[0].nValue = 50 * COIN;
-        txNew.vout[0].scriptPubKey = CScript() << ParseHex("0465b6cdba122a93c06742cd8ba9ad6bda35e715badcc3cd87f8d7a1fd2c3eeb74bb9d8100d7c0ea33892c5c953a6c2d9d6ec1a6789d141ce63e3bf8fdb92cb313") << OP_CHECKSIG;
+        txNew.vout[0].nValue = 524288 * COIN;
+        txNew.vout[0].scriptPubKey = CScript() << ParseHex("040184710fa689ad5023690c80f3a49c8f13f8d45b8c857fbcbc8bc4a8e4d3eb4b10f4d4604fa08dce601aaf0f470216fe1b51850b4acf21b179c45070ac7b03a9") << OP_CHECKSIG;
         CBlock block;
         block.vtx.push_back(txNew);
         block.hashPrevBlock = 0;
         block.hashMerkleRoot = block.BuildMerkleTree();
         block.nVersion = 1;
-        block.nTime    = 1404180655;
+        block.nTime    = 1394648475;
         block.nBits    = 0x1e0ffff0;
         block.nNonce   = 113826348;
 
         if (fTestNet)
         {
-            block.nTime    = 1404180655;
+            block.nTime    = 1394648475;
             block.nNonce   = 113826348;
         }
 
@@ -2068,7 +2068,7 @@ bool LoadBlockIndex(bool fAllowNew)
         printf("block.GetHash() = %s\n", block.GetHash().ToString().c_str());
         printf("hashGenesisBlock = %s\n", hashGenesisBlock.ToString().c_str());
         printf("block.hashMerkleRoot = %s\n", block.hashMerkleRoot.ToString().c_str());
-        assert(block.hashMerkleRoot == uint256("0x"));
+        assert(block.hashMerkleRoot == uint256("0x5ef14a91aa79791c7d8898998246d9677c02542dc24b28ef16f266f209ef44ac"));
 		
 		
 		uint256 hashTarget = CBigNum().SetCompact(block.nBits).getuint256();
