@@ -33,7 +33,7 @@ unsigned int nTransactionsUpdated = 0;
 
 map<uint256, CBlockIndex*> mapBlockIndex;
 
-uint256 hashGenesisBlock("0x");
+uint256 hashGenesisBlock("0xc3c997af8c38c9e2654db9ec621c6a5743a6d3fffcf848415fef63a99d4b343f");
 static CBigNum bnProofOfWorkLimit(~uint256(0) >> 20); // Infinitecoin: starting difficulty is 1 / 2^12
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
@@ -2011,7 +2011,7 @@ bool LoadBlockIndex(bool fAllowNew)
         pchMessageStart[1] = 0xc1;
         pchMessageStart[2] = 0xb7;
         pchMessageStart[3] = 0xdc;
-        hashGenesisBlock = uint256("0x");
+        hashGenesisBlock = uint256("0xc3c997af8c38c9e2654db9ec621c6a5743a6d3fffcf848415fef63a99d4b343f");
     }
 
     //
@@ -2068,7 +2068,7 @@ bool LoadBlockIndex(bool fAllowNew)
         printf("block.GetHash() = %s\n", block.GetHash().ToString().c_str());
         printf("hashGenesisBlock = %s\n", hashGenesisBlock.ToString().c_str());
         printf("block.hashMerkleRoot = %s\n", block.hashMerkleRoot.ToString().c_str());
-        assert(block.hashMerkleRoot == uint256("0xe2301618e20237b959e2756cb64e20deda03f3b08b480eec85d5850e42ee288e"));
+        assert(block.hashMerkleRoot == uint256("0x"));
 		
 		
 		uint256 hashTarget = CBigNum().SetCompact(block.nBits).getuint256();
@@ -2079,7 +2079,7 @@ bool LoadBlockIndex(bool fAllowNew)
         printf("nonce %08X: hash = %s (target = %s)\n", block.nNonce, thash.ToString().c_str(), hashTarget.ToString().c_str());
 
         // If genesis block hash does not match, then generate new genesis hash.
-        if (true && block.GetHash() != hashGenesisBlock)
+        if (false && block.GetHash() != hashGenesisBlock)
         {
             printf("Searching for genesis block...\n");
             // This will figure out a valid hash and Nonce if you're
