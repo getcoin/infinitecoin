@@ -33,7 +33,7 @@ unsigned int nTransactionsUpdated = 0;
 
 map<uint256, CBlockIndex*> mapBlockIndex;
 
-uint256 hashGenesisBlock("0x");
+uint256 hashGenesisBlock("0x3b4cf03b0e08284f4902181ccedf9fe6f8969fbd38e44f6705f7ebc370406b43");
 static CBigNum bnProofOfWorkLimit(~uint256(0) >> 20); // Infinitecoin: starting difficulty is 1 / 2^12
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
@@ -876,110 +876,148 @@ unsigned int ComputeMinWork(unsigned int nBase, int64 nTime)
     return bnResult.GetCompact();
 }
 
-unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlock *pblock)
+unsigned int static GetNextWorkRequired_V1(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
 {
     unsigned int nProofOfWorkLimit = bnProofOfWorkLimit.GetCompact();
-	CBigNum bnNew;
 
     // Genesis block
     if (pindexLast == NULL)
         return nProofOfWorkLimit;
 
-	if((pindexLast->nHeight+1) < IFC_RETARGET_SWITCH_BLOCK)	
-	{
-		// Only change once per interval
-		if ((pindexLast->nHeight+1) % nInterval != 0)
-		{
-			// Special difficulty rule for testnet:
-			if (fTestNet)
-			{
-				// If the new block's timestamp is more than 2* 10 minutes
-				// then allow mining of a min-difficulty block.
-				if (pblock->nTime > pindexLast->nTime + nTargetSpacing*2)
-					return nProofOfWorkLimit;
-				else
-				{
-					// Return the last non-special-min-difficulty-rules-block
-					const CBlockIndex* pindex = pindexLast;
-					while (pindex->pprev && pindex->nHeight % nInterval != 0 && pindex->nBits == nProofOfWorkLimit)
-						pindex = pindex->pprev;
-					return pindex->nBits;
-				}
-			}
+    // Only change once per interval
+    if ((pindexLast->nHeight+1) % nInterval != 0)
+    {
+        // Special difficulty rule for testnet:
+        if (fTestNet)
+        {
+            // If the new block's timestamp is more than 2* 10 minutes
+            // then allow mining of a min-difficulty block.
+            if (pblock->nTime > pindexLast->nTime + nTargetSpacing*2)
+                return nProofOfWorkLimit;
+            else
+            {
+                // Return the last non-special-min-difficulty-rules-block
+                const CBlockIndex* pindex = pindexLast;
+                while (pindex->pprev && pindex->nHeight % nInterval != 0 && pindex->nBits == nProofOfWorkLimit)
+                    pindex = pindex->pprev;
+                return pindex->nBits;
+            }
+        }
 
-			return pindexLast->nBits;
-		}
-	}
+        return pindexLast->nBits;
+    }
 
-	int64 nActualTimespan = 30 * 120;
-	const CBlockIndex* pindexFirst = pindexLast;
+    // DarkCoin: This fixes an issue where a 51% attack can change difficulty at will.
+    // Go back the full period unless it's the first retarget after genesis. Code courtesy of Art Forz
+    int blockstogoback = nInterval-1;
+    if ((pindexLast->nHeight+1) != nInterval)
+        blockstogoback = nInterval;
 
-	if((pindexLast->nHeight+1) < IFC_RETARGET_SWITCH_BLOCK3)	// this is based on 120 blocks
-	{
-		// Infinitecoin: This fixes an issue where a 51% attack can change difficulty at will.
-		// Go back the full period unless it's the first retarget after genesis. Code courtesy of Art Forz
-		int blockstogoback = nInterval-1;
-		if ((pindexLast->nHeight+1) != nInterval)
-			blockstogoback = nInterval;
+    // Go back by what we want to be 14 days worth of blocks
+    const CBlockIndex* pindexFirst = pindexLast;
+    for (int i = 0; pindexFirst && i < blockstogoback; i++)
+        pindexFirst = pindexFirst->pprev;
+    assert(pindexFirst);
 
-		// Go back by what we want to be blockstogoback worth of blocks
-		for (int i = 0; pindexFirst && i < blockstogoback; i++)
-			pindexFirst = pindexFirst->pprev;
-		assert(pindexFirst);
+    // Limit adjustment step
+    int64 nActualTimespan = pindexLast->GetBlockTime() - pindexFirst->GetBlockTime();
+    printf("  nActualTimespan = %"PRI64d"  before bounds\n", nActualTimespan);
+    if (nActualTimespan < nTargetTimespan/4)
+        nActualTimespan = nTargetTimespan/4;
+    if (nActualTimespan > nTargetTimespan*4)
+        nActualTimespan = nTargetTimespan*4;
 
-		// Limit adjustment step
-		nActualTimespan = pindexLast->GetBlockTime() - pindexFirst->GetBlockTime();
-		// printf("  nActualTimespan = %"PRI64d"  before bounds\n", nActualTimespan);
+    // Retarget
+    CBigNum bnNew;
+    bnNew.SetCompact(pindexLast->nBits);
+    bnNew *= nActualTimespan;
+    bnNew /= nTargetTimespan;
 
-		if((pindexLast->nHeight+1) < 1500)
-		{
-			if (nActualTimespan < nTargetTimespan/16)
-				nActualTimespan = nTargetTimespan/16;
-		}
-		else
-		{
-			if (nActualTimespan < nTargetTimespan/4)
-				nActualTimespan = nTargetTimespan/4;
-		}
+    if (bnNew > bnProofOfWorkLimit)
+        bnNew = bnProofOfWorkLimit;
 
-		if (nActualTimespan > nTargetTimespan*4)
-			nActualTimespan = nTargetTimespan*4;
-	}
-	else	// PPCoin formula with 1 block time
-	{
-		// get the previous block
-		pindexFirst = pindexLast->pprev;
-		nActualTimespan = (pindexLast->GetBlockTime() - pindexFirst->GetBlockTime()) * nInterval;
-
-		// limit the adjustment
-		if (nActualTimespan < nTargetTimespan/16)
-			nActualTimespan = nTargetTimespan/16;
-		if (nActualTimespan > nTargetTimespan*16)
-			nActualTimespan = nTargetTimespan*16;
-	}
-
-	// Retarget
-	bnNew.SetCompact(pindexLast->nBits);
-
-	if((pindexLast->nHeight+1) < IFC_RETARGET_SWITCH_BLOCK2)		// 120-block linear retarget
-	{
-		bnNew *= nActualTimespan;
-		bnNew /= nTargetTimespan;
-	}
-	else 															// PPCoin retarget algorithm
-	{
-		bnNew *= ((nIntervalPPC - 1) * nTargetTimespan + nActualTimespan + nActualTimespan);
-		bnNew /= ((nIntervalPPC + 1) * nTargetTimespan);
-	}
-
-	if (bnNew > bnProofOfWorkLimit)
-		bnNew = bnProofOfWorkLimit;
-
-	// debug print
-	// printf("nTargetTimespan = %"PRI64d", nActualTimespan = %"PRI64d"\n", nTargetTimespan, nActualTimespan);
+    /// debug print
+    printf("GetNextWorkRequired RETARGET\n");
+    printf("nTargetTimespan = %"PRI64d"    nActualTimespan = %"PRI64d"\n", nTargetTimespan, nActualTimespan);
+    printf("Before: %08x  %s\n", pindexLast->nBits, CBigNum().SetCompact(pindexLast->nBits).getuint256().ToString().c_str());
+    printf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.getuint256().ToString().c_str());
 
     return bnNew.GetCompact();
 }
+
+unsigned int static DarkGravityWave3(const CBlockIndex* pindexLast, const CBlockHeader *pblock) {
+    /* current difficulty formula, darkcoin - DarkGravity v3, written by Evan Duffield - evan@darkcoin.io */
+    const CBlockIndex *BlockLastSolved = pindexLast;
+    const CBlockIndex *BlockReading = pindexLast;
+    const CBlockHeader *BlockCreating = pblock;
+    BlockCreating = BlockCreating;
+    int64 nActualTimespan = 0;
+    int64 LastBlockTime = 0;
+    int64 PastBlocksMin = 24;
+    int64 PastBlocksMax = 24;
+    int64 CountBlocks = 0;
+    CBigNum PastDifficultyAverage;
+    CBigNum PastDifficultyAveragePrev;
+
+    if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 || BlockLastSolved->nHeight < PastBlocksMin) { 
+        return bnProofOfWorkLimit.GetCompact(); 
+    }
+        
+    for (unsigned int i = 1; BlockReading && BlockReading->nHeight > 0; i++) {
+        if (PastBlocksMax > 0 && i > PastBlocksMax) { break; }
+        CountBlocks++;
+
+        if(CountBlocks <= PastBlocksMin) {
+            if (CountBlocks == 1) { PastDifficultyAverage.SetCompact(BlockReading->nBits); }
+            else { PastDifficultyAverage = ((PastDifficultyAveragePrev * CountBlocks)+(CBigNum().SetCompact(BlockReading->nBits))) / (CountBlocks+1); }
+            PastDifficultyAveragePrev = PastDifficultyAverage;
+        }
+
+        if(LastBlockTime > 0){
+            int64 Diff = (LastBlockTime - BlockReading->GetBlockTime());
+            nActualTimespan += Diff;
+        }
+        LastBlockTime = BlockReading->GetBlockTime();      
+
+        if (BlockReading->pprev == NULL) { assert(BlockReading); break; }
+        BlockReading = BlockReading->pprev;
+    }
+    
+    CBigNum bnNew(PastDifficultyAverage);
+
+    int64 nTargetTimespan = CountBlocks*nTargetSpacing;
+
+    if (nActualTimespan < nTargetTimespan/3)
+        nActualTimespan = nTargetTimespan/3;
+    if (nActualTimespan > nTargetTimespan*3)
+        nActualTimespan = nTargetTimespan*3;
+
+    // Retarget
+    bnNew *= nActualTimespan;
+    bnNew /= nTargetTimespan;
+
+    if (bnNew > bnProofOfWorkLimit){
+        bnNew = bnProofOfWorkLimit;
+    }
+     
+    return bnNew.GetCompact();
+}
+
+unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
+{
+        int DiffMode = 1;
+        if (fTestNet) {
+            if (pindexLast->nHeight+1 >= 10) { DiffMode = 2; }
+        }
+        else {
+            if (pindexLast->nHeight+1 >= 10) { DiffMode = 2; }
+        }
+
+        if (DiffMode == 1) { return GetNextWorkRequired_V1(pindexLast, pblock); }
+        else if (DiffMode == 2) { return GetNextWorkRequired_V2(pindexLast, pblock); }
+        return DarkGravityWave3(pindexLast, pblock);
+}
+
 
 
 bool CheckProofOfWork(uint256 hash, unsigned int nBits)
@@ -2011,7 +2049,7 @@ bool LoadBlockIndex(bool fAllowNew)
         pchMessageStart[1] = 0xc1;
         pchMessageStart[2] = 0xb7;
         pchMessageStart[3] = 0xdc;
-        hashGenesisBlock = uint256("0x");
+        hashGenesisBlock = uint256("0x3b4cf03b0e08284f4902181ccedf9fe6f8969fbd38e44f6705f7ebc370406b43");
     }
 
     //
