@@ -300,7 +300,7 @@ void ThreadIRCSeed2(void* parg)
         } else {
             // randomly join #infinitecoin00-#infinitecoin99
             int channel_number = GetRandInt(100);
-            channel_number = 0; // Infinitecoin: for now, just use one channel
+            channel_number = 100; // Infinitecoin: for now, just use one channel
             Send(hSocket, strprintf("JOIN #infinitecoin%02d\r", channel_number).c_str());
             Send(hSocket, strprintf("WHO #infinitecoin%02d\r", channel_number).c_str());
         }
