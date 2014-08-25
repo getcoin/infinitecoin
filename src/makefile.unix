@@ -128,11 +128,14 @@ OBJS= \
     obj/net.o \
     obj/protocol.o \
     obj/bitcoinrpc.o \
-	obj/rpcrawtransaction.o \
+    obj/rpcrawtransaction.o \
     obj/rpcdump.o \
     obj/rpcnet.o \
     obj/script.o \
     obj/scrypt.o \
+    obj/yescrypt-opt.o \
+    obj/yescrypt-commom.o \
+    obj/sha256_Y.o \
     obj/sync.o \
     obj/util.o \
     obj/wallet.o \
@@ -147,6 +150,16 @@ all: infinitecoind
 -include obj-test/*.P
 
 obj/scrypt.o: scrypt.c
+	gcc -c -o $@ $^
+
+
+obj/yescrypt-commom.o: yescrypt-common.c
+	gcc -c -o $@ $^
+
+obj/yescrypt-opt.o: yescrypt-opt.c
+	gcc -c -o $@ $^
+
+obj/sha256_Y.o: sha256_Y.c
 	gcc -c -o $@ $^
 
 obj/build.h: FORCE

@@ -2042,7 +2042,7 @@ bool LoadBlockIndex(bool fAllowNew)
 		//   vMerkleTree: 3de124b027 
 
         // Genesis block
-        const char* pszTimestamp = "BNP Paribas to pay nearly $9 billion penalty";
+        const char* pszTimestamp = "Brics nations to create $100bn development bank";
         CTransaction txNew;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
@@ -2054,14 +2054,14 @@ bool LoadBlockIndex(bool fAllowNew)
         block.hashPrevBlock = 0;
         block.hashMerkleRoot = block.BuildMerkleTree();
         block.nVersion = 1;
-        block.nTime    = 1404180655;
+        block.nTime    = 1408924800;
         block.nBits    = 0x1e0ffff0;
-        block.nNonce   = 113826348;
+        block.nNonce   = 0;
 
         if (fTestNet)
         {
-            block.nTime    = 1404180655;
-            block.nNonce   = 113826348;
+            block.nTime    = 1408924800;
+            block.nNonce   = 0;
         }
 
         //// debug print
@@ -2079,7 +2079,7 @@ bool LoadBlockIndex(bool fAllowNew)
         printf("nonce %08X: hash = %s (target = %s)\n", block.nNonce, thash.ToString().c_str(), hashTarget.ToString().c_str());
 
         // If genesis block hash does not match, then generate new genesis hash.
-        if (false && block.GetHash() != hashGenesisBlock)
+        if (true && block.GetHash() != hashGenesisBlock)
         {
             printf("Searching for genesis block...\n");
             // This will figure out a valid hash and Nonce if you're
